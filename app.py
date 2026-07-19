@@ -85,19 +85,50 @@ def is_valid_category(text):
 # DESIGN TOKENS — one simple accent color, nothing fancy
 # ===================================================
 
-INK    = "#1F2937"   # text
+INK    = "#1F2937"   # text (fallback for light mode)
 MUTED  = "#6B7280"   # secondary text
 BLUE   = "#2563EB"   # single accent color, used everywhere
 
 # ===================================================
-# CSS — kept minimal on purpose
+# LOCAL LIBRARY PHOTO (optional) — put a photo at
+# assets/library.jpg and it will show up as a soft,
+# light watermark behind the login page. If the file
+# isn't there, everything still works fine without it.
+# ===================================================
+
+import base64
+from pathlib import Path
+
+def _get_base64_image(path):
+    try:
+        return base64.b64encode(Path(path).read_bytes()).decode()
+    except Exception:
+        return None
+
+_library_photo_b64 = _get_base64_image("assets/library.jpg")
+
+if _library_photo_b64:
+    _login_bg_css = f"""
+        background-image:
+            linear-gradient(rgba(255,255,255,0.90), rgba(255,255,255,0.90)),
+            url(data:image/jpeg;base64,{_library_photo_b64});
+        background-size: cover;
+        background-position: center;
+    """
+else:
+    _login_bg_css = ""
+
+# ===================================================
+# CSS — respects Streamlit's own light/dark theme via
+# its built-in CSS variables, with sensible fallbacks.
 # ===================================================
 
 st.markdown(f"""
 <style>
 
 .stApp {{
-background:#F7F8FA;
+background-color: var(--background-color, #F7F8FA);
+color: var(--text-color, {INK});
 }}
 
 .block-container {{
@@ -105,22 +136,34 @@ padding-top:2rem !important;
 max-width:100% !important;
 }}
 
+.login-bg {{
+{_login_bg_css}
+border-radius: 12px;
+padding: 8px 8px 24px 8px;
+}}
+
 .title {{
 text-align:center;
 font-weight:700;
 font-size:34px;
-color:{INK};
+color: var(--text-color, {INK});
 margin-bottom:4px;
 }}
 
 .subtitle {{
 text-align:center;
-color:{MUTED};
+color: var(--text-color, {MUTED});
+opacity: 0.75;
 font-size:14px;
 margin-bottom:20px;
 }}
 
-/* Buttons — simple solid color, no gradient */
+/* Make sure body text / labels always follow the active theme's text color */
+.stApp, .stApp p, .stApp label, .stApp span, .stApp li {{
+color: var(--text-color, {INK});
+}}
+
+/* Buttons — simple solid color, no gradient (stays legible in both themes) */
 div.stButton > button, div[data-testid="stFormSubmitButton"] button {{
 border-radius:6px !important;
 font-weight:600 !important;
@@ -133,12 +176,12 @@ div.stButton > button:hover, div[data-testid="stFormSubmitButton"] button:hover 
 background:#1D4ED8 !important;
 }}
 
-/* Cards / forms — plain white box, thin border, no shadow tricks */
+/* Cards / forms — adapts to light or dark theme automatically */
 div[data-testid="stVerticalBlockBorderWrapper"],
 div[data-testid="stForm"] {{
 border-radius:8px !important;
-border:1px solid #E5E7EB !important;
-background:#FFFFFF !important;
+border:1px solid rgba(128,128,128,0.25) !important;
+background: var(--secondary-background-color, #FFFFFF) !important;
 padding:1rem !important;
 }}
 
@@ -148,12 +191,16 @@ color:{BLUE} !important;
 font-weight:600;
 }}
 
-/* Metrics — default Streamlit look, just a light card */
+/* Metrics — adapts to light or dark theme automatically */
 div[data-testid="stMetric"] {{
-background:white;
-border:1px solid #E5E7EB;
+background: var(--secondary-background-color, #FFFFFF);
+border:1px solid rgba(128,128,128,0.25);
 border-radius:8px;
 padding:10px 14px;
+}}
+
+[data-testid="stMetricValue"], [data-testid="stMetricLabel"] {{
+color: var(--text-color, {INK}) !important;
 }}
 
 </style>
@@ -193,8 +240,19 @@ try {
 
 if not st.session_state.logged_in:
 
+    _login_hour = datetime.datetime.now().hour
+    if _login_hour < 12:
+        _login_greeting = "Good Morning"
+    elif _login_hour < 17:
+        _login_greeting = "Good Afternoon"
+    else:
+        _login_greeting = "Good Evening"
+
+    st.markdown('<div class="login-bg">', unsafe_allow_html=True)
+    st.markdown(f"<p class='subtitle' style='margin-bottom:2px;'>👋 {_login_greeting}</p>", unsafe_allow_html=True)
     st.markdown("<h1 class='title'>📚 Smart Library Management System</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Manage books, students and issued copies — all in one place</p>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns([1, 2, 1])
 
@@ -524,16 +582,15 @@ else:
 
             with t2:
 
-                rm1, rm2 = st.columns([2,1])
+                roll=st.text_input(
+                    "Roll Number",
+                    key="remove"
+                )
 
-                with rm1:
-                    roll=st.text_input(
-                        "Roll Number",
-                        key="remove"
-                    )
+                confirm_remove = st.checkbox("I confirm I want to remove this student", key="confirm_remove")
 
-                with rm2:
-                    confirm_remove = st.checkbox("Confirm removal", key="confirm_remove")
+                if roll and not confirm_remove:
+                    st.caption("⚠️ Please confirm before removing.")
 
                 if st.button("🗑️ Remove", disabled=not (roll and confirm_remove), use_container_width=True):
 
@@ -542,9 +599,6 @@ else:
                             roll
                         )
                         time.sleep(0.3)
-
-                if roll and not confirm_remove:
-                    st.caption("⚠️ Please confirm before removing.")
 
         # ===========================================
         # ISSUE
@@ -585,6 +639,9 @@ else:
                         student_label = st.selectbox(
                             "🎓 Student",
                             list(student_options.keys()),
+                            index=None,
+                            placeholder="Search by roll number or name...",
+                            help="Type a roll number (e.g. 2023CS01) or student name to filter the list.",
                             key="issue_student_select"
                         )
 
@@ -592,6 +649,8 @@ else:
                         book_label = st.selectbox(
                             "📖 Book",
                             list(book_options.keys()),
+                            index=None,
+                            placeholder="Type to search a book...",
                             key="issue_book_select"
                         )
 
@@ -604,16 +663,19 @@ else:
 
                     if submitted:
 
-                        roll = student_options[student_label]
-                        book = book_options[book_label]
+                        if not student_label or not book_label:
+                            st.warning("⚠️ Please search and select both a student and a book.")
+                        else:
+                            roll = student_options[student_label]
+                            book = book_options[book_label]
 
-                        with st.spinner("Issuing book..."):
-                            issue_book(
-                                roll,
-                                book,
-                                date
-                            )
-                            time.sleep(0.3)
+                            with st.spinner("Issuing book..."):
+                                issue_book(
+                                    roll,
+                                    book,
+                                    date
+                                )
+                                time.sleep(0.3)
 
         # ===========================================
         # RETURN
@@ -639,45 +701,64 @@ else:
                     return_student_label = st.selectbox(
                         "🎓 Student",
                         list(student_options.keys()),
+                        index=None,
+                        placeholder="Search by roll number or name...",
+                        help="Type a roll number (e.g. 2023CS01) or student name to filter the list.",
                         key="return_student_select"
                     )
 
-                return_roll = student_options[return_student_label]
-                active_books = get_active_books_for_student(return_roll)
+                if not return_student_label:
 
-                if not active_books:
                     with rc2:
-                        st.selectbox("📖 Book", ["No books currently issued"], disabled=True, key="return_book_empty")
+                        st.selectbox("📖 Book", ["Select a student first"], disabled=True, key="return_book_empty")
                     with rc3:
                         st.date_input("Return Date", key="return_date_empty", disabled=True)
-                    st.info(f"ℹ️ This student has no books currently issued.")
+                    st.info("ℹ️ Search and select a student above to see their currently issued books.")
+
                 else:
-                    book_options = {
-                        f"{bid} — {bname}  (issued {idate})": bid
-                        for bid, bname, idate in active_books
-                    }
 
-                    with rc2:
-                        return_book_label = st.selectbox(
-                            "📖 Book to Return",
-                            list(book_options.keys()),
-                            key="return_book_select"
-                        )
+                    return_roll = student_options[return_student_label]
+                    active_books = get_active_books_for_student(return_roll)
 
-                    with rc3:
-                        date = st.date_input("Return Date", key="return_date_input")
+                    if not active_books:
+                        with rc2:
+                            st.selectbox("📖 Book", ["No books currently issued"], disabled=True, key="return_book_empty2")
+                        with rc3:
+                            st.date_input("Return Date", key="return_date_empty2", disabled=True)
+                        st.info("ℹ️ This student has no books currently issued.")
+                    else:
+                        book_options = {
+                            f"{bid} — {bname}  (issued {idate})": bid
+                            for bid, bname, idate in active_books
+                        }
 
-                    return_book_id = book_options[return_book_label]
-
-                    if st.button("📥 Return Book", use_container_width=True, key="return_submit_btn"):
-
-                        with st.spinner("Processing return..."):
-                            return_book(
-                                return_roll,
-                                return_book_id,
-                                date
+                        with rc2:
+                            return_book_label = st.selectbox(
+                                "📖 Book to Return",
+                                list(book_options.keys()),
+                                index=None,
+                                placeholder="Type to search a book...",
+                                key="return_book_select"
                             )
-                            time.sleep(0.3)
+
+                        with rc3:
+                            date = st.date_input("Return Date", key="return_date_input")
+
+                        if not return_book_label:
+                            st.button("📥 Return Book", use_container_width=True, disabled=True, key="return_submit_btn_disabled")
+                            st.caption("⚠️ Please select a book to return.")
+                        else:
+                            return_book_id = book_options[return_book_label]
+
+                            if st.button("📥 Return Book", use_container_width=True, key="return_submit_btn"):
+
+                                with st.spinner("Processing return..."):
+                                    return_book(
+                                        return_roll,
+                                        return_book_id,
+                                        date
+                                    )
+                                    time.sleep(0.3)
 
         # ===========================================
         # REPORTS
