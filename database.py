@@ -11,11 +11,13 @@ def get_connection():
     """
     return mysql.connector.connect(
         host=st.secrets["db_host"],
-        port=int(st.secrets.get("db_port", 3306)),
+        port=int(st.secrets["db_port"]),
         user=st.secrets["db_user"],
         password=st.secrets["db_password"],
         database=st.secrets["db_name"],
-    )
+        ssl_mode='REQUIRED'  ,# Aiven database ke liye zaroori ho sakta hai
+)
+    
 
 
 def fetch_one(query, params=None):
