@@ -16,7 +16,7 @@ def get_connection():
         user=st.secrets["db_user"],
         password=st.secrets["db_password"],
         database=st.secrets["db_name"],
-        
+        ssl_disabled=False
     )
     
 
