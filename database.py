@@ -9,14 +9,15 @@ def get_connection():
     Streamlit Community Cloud (Secrets set in the app dashboard) —
     no .env / python-dotenv needed.
     """
+
     return mysql.connector.connect(
         host=st.secrets["db_host"],
         port=int(st.secrets["db_port"]),
         user=st.secrets["db_user"],
         password=st.secrets["db_password"],
         database=st.secrets["db_name"],
-        ssl_mode='REQUIRED'  ,# Aiven database ke liye zaroori ho sakta hai
-)
+        
+    )
     
 
 
