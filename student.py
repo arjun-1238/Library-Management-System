@@ -214,9 +214,9 @@ def display_search_result():
         card = (
             '<div style="border:1px solid #E5E7EB;border-radius:8px;padding:14px;'
             'height:172px;display:flex;flex-direction:column;justify-content:space-between;'
-            'background:white;">'
+            'background:white;color:#1F2937;">'
               '<div>'
-                f'<div style="font-weight:700;font-size:14.5px;line-height:1.35;margin-bottom:4px;'
+                f'<div style="font-weight:700;font-size:14.5px;line-height:1.35;margin-bottom:4px;color:#1F2937;'
                 f'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">'
                 f'{icon} {name}</div>'
                 f'<div style="color:#6B7280;font-size:12px;margin-bottom:8px;'

@@ -13,6 +13,8 @@ from auth import (
 
 from admin import (
     add_book,
+    get_book_by_id,
+    update_book,
     register_student,
     remove_student,
     issue_book,
@@ -25,6 +27,7 @@ from admin import (
     get_student_by_roll,
     get_all_students,
     get_available_books,
+    get_all_books,
     get_active_books_for_student,
     search_books,
     search_students,
@@ -107,17 +110,6 @@ def _get_base64_image(path):
 
 _library_photo_b64 = _get_base64_image("assets/library.jpg")
 
-if _library_photo_b64:
-    _login_bg_css = f"""
-        background-image:
-            linear-gradient(rgba(255,255,255,0.90), rgba(255,255,255,0.90)),
-            url(data:image/jpeg;base64,{_library_photo_b64});
-        background-size: cover;
-        background-position: center;
-    """
-else:
-    _login_bg_css = ""
-
 # ===================================================
 # CSS — respects Streamlit's own light/dark theme via
 # its built-in CSS variables, with sensible fallbacks.
@@ -134,12 +126,8 @@ color: var(--text-color, {INK});
 .block-container {{
 padding-top:2rem !important;
 max-width:100% !important;
-}}
-
-.login-bg {{
-{_login_bg_css}
-border-radius: 12px;
-padding: 8px 8px 24px 8px;
+position: relative;
+z-index: 1;
 }}
 
 .title {{
@@ -206,6 +194,26 @@ color: var(--text-color, {INK}) !important;
 </style>
 """, unsafe_allow_html=True)
 
+# Show the library photo very faintly behind EVERY page (login and all
+# dashboard tabs), not just the login screen. Low, fixed opacity means it
+# stays "light" and unobtrusive in both light and dark theme, and z-index:-1
+# + pointer-events:none keeps it purely decorative — nothing sits behind it,
+# nothing can accidentally click through it.
+if _library_photo_b64:
+    st.markdown(f"""
+    <div style="
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background-image: url(data:image/jpeg;base64,{_library_photo_b64});
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        opacity: 0.07;
+        pointer-events: none;
+    "></div>
+    """, unsafe_allow_html=True)
+
 # Disable the browser's own autocomplete/suggestion dropdown on every input
 # field (it was showing old values typed in unrelated fields). Streamlit's
 # text_input has no autocomplete= option, so this is injected via JS.
@@ -248,11 +256,9 @@ if not st.session_state.logged_in:
     else:
         _login_greeting = "Good Evening"
 
-    st.markdown('<div class="login-bg">', unsafe_allow_html=True)
     st.markdown(f"<p class='subtitle' style='margin-bottom:2px;'>👋 {_login_greeting}</p>", unsafe_allow_html=True)
     st.markdown("<h1 class='title'>📚 Smart Library Management System</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Manage books, students and issued copies — all in one place</p>", unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns([1, 2, 1])
 
@@ -466,61 +472,152 @@ else:
 
         with tab1:
 
-            st.subheader("Add a New Book")
+            book_t1, book_t2 = st.tabs(["➕ Add Book", "✏️ Update Book"])
 
-            with st.form("add_book_form", clear_on_submit=True):
+            with book_t1:
 
-                col1, col2, col3 = st.columns(3)
+                st.subheader("Add a New Book")
 
-                with col1:
-                    book_id=st.text_input("Book ID", help="A unique code for this book, e.g. B001")
-                    category=st.text_input("Category")
+                with st.form("add_book_form", clear_on_submit=True):
 
-                with col2:
-                    name=st.text_input("Book Name")
-                    qty=st.number_input(
-                        "Quantity",
-                        min_value=1,
-                        value=1,
-                        help="Number of physical copies being added"
+                    col1, col2, col3 = st.columns(3)
+
+                    with col1:
+                        book_id=st.text_input("Book ID", help="A unique code for this book, e.g. B001")
+                        category=st.text_input("Category")
+
+                    with col2:
+                        name=st.text_input("Book Name")
+                        qty=st.number_input(
+                            "Quantity",
+                            min_value=1,
+                            value=1,
+                            help="Number of physical copies being added"
+                        )
+
+                    with col3:
+                        author=st.text_input("Author")
+
+                    submitted = st.form_submit_button("➕ Add Book", use_container_width=True)
+
+                    if submitted:
+
+                        errors = []
+
+                        if not book_id or not name or not author or not category:
+                            errors.append("Book ID, Book Name, Author and Category are all required.")
+                        else:
+                            if not is_valid_book_id(book_id):
+                                errors.append("Book ID should be 2–20 letters/numbers/hyphens only, no spaces (e.g. B001).")
+                            if len(name.strip()) < 2:
+                                errors.append("Book Name looks too short.")
+                            if not is_valid_name(author):
+                                errors.append("Author should contain only letters, spaces or hyphens (no numbers).")
+                            if not is_valid_category(category):
+                                errors.append("Category should contain only letters and spaces (e.g. Fiction).")
+
+                        if errors:
+                            for e in errors:
+                                st.warning(f"⚠️ {e}")
+                        else:
+                            with st.spinner("Adding book..."):
+                                added = add_book(
+                                    book_id,
+                                    name,
+                                    author,
+                                    category,
+                                    qty
+                                )
+                                time.sleep(0.3)
+                            if added:
+                                st.balloons()
+
+            with book_t2:
+
+                st.subheader("Update an Existing Book")
+
+                all_books = get_all_books()
+
+                if not all_books:
+                    st.info("📭 No books in the catalogue yet — add one first.")
+                else:
+                    update_book_options = {
+                        f"{bid} — {bname} by {author}  (Stock: {qty})": bid
+                        for bid, bname, author, qty in all_books
+                    }
+
+                    selected_label = st.selectbox(
+                        "🔍 Search and select a book to edit",
+                        list(update_book_options.keys()),
+                        index=None,
+                        placeholder="Type a book ID, name or author...",
+                        key="update_book_select"
                     )
 
-                with col3:
-                    author=st.text_input("Author")
-
-                submitted = st.form_submit_button("➕ Add Book", use_container_width=True)
-
-                if submitted:
-
-                    errors = []
-
-                    if not book_id or not name or not author or not category:
-                        errors.append("Book ID, Book Name, Author and Category are all required.")
+                    if not selected_label:
+                        st.info("ℹ️ Select a book above to load and edit its details.")
                     else:
-                        if not is_valid_book_id(book_id):
-                            errors.append("Book ID should be 2–20 letters/numbers/hyphens only, no spaces (e.g. B001).")
-                        if len(name.strip()) < 2:
-                            errors.append("Book Name looks too short.")
-                        if not is_valid_name(author):
-                            errors.append("Author should contain only letters, spaces or hyphens (no numbers).")
-                        if not is_valid_category(category):
-                            errors.append("Category should contain only letters and spaces (e.g. Fiction).")
+                        selected_book_id = update_book_options[selected_label]
+                        current = get_book_by_id(selected_book_id)
 
-                    if errors:
-                        for e in errors:
-                            st.warning(f"⚠️ {e}")
-                    else:
-                        with st.spinner("Adding book..."):
-                            added = add_book(
-                                book_id,
-                                name,
-                                author,
-                                category,
-                                qty
-                            )
-                            time.sleep(0.3)
-                        if added:
-                            st.balloons()
+                        if not current:
+                            st.error("Couldn't load this book's details. It may have just been removed.")
+                        else:
+                            _, cur_name, cur_author, cur_category, cur_qty = current
+
+                            with st.form("update_book_form"):
+
+                                st.caption(f"Book ID: `{selected_book_id}` (Book ID itself can't be changed)")
+
+                                ucol1, ucol2, ucol3 = st.columns(3)
+
+                                with ucol1:
+                                    u_name = st.text_input("Book Name", value=cur_name)
+
+                                with ucol2:
+                                    u_author = st.text_input("Author", value=cur_author)
+
+                                with ucol3:
+                                    u_category = st.text_input("Category", value=cur_category or "")
+
+                                u_qty = st.number_input(
+                                    "Quantity Available",
+                                    min_value=0,
+                                    value=int(cur_qty),
+                                    help="Total copies currently available for issue — adjust this when restocking."
+                                )
+
+                                update_submitted = st.form_submit_button("💾 Save Changes", use_container_width=True)
+
+                                if update_submitted:
+
+                                    errors = []
+
+                                    if not u_name or not u_author or not u_category:
+                                        errors.append("Book Name, Author and Category are all required.")
+                                    else:
+                                        if len(u_name.strip()) < 2:
+                                            errors.append("Book Name looks too short.")
+                                        if not is_valid_name(u_author):
+                                            errors.append("Author should contain only letters, spaces or hyphens (no numbers).")
+                                        if not is_valid_category(u_category):
+                                            errors.append("Category should contain only letters and spaces (e.g. Fiction).")
+
+                                    if errors:
+                                        for e in errors:
+                                            st.warning(f"⚠️ {e}")
+                                    else:
+                                        with st.spinner("Saving changes..."):
+                                            updated = update_book(
+                                                selected_book_id,
+                                                u_name,
+                                                u_author,
+                                                u_category,
+                                                u_qty
+                                            )
+                                            time.sleep(0.3)
+                                        if updated:
+                                            st.balloons()
 
         # ===========================================
         # STUDENT

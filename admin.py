@@ -125,6 +125,70 @@ def add_book(book_id, book_name, author, category, quantity):
         conn.close()
 
 
+def get_book_by_id(book_id):
+    """Look up one book's current details — used to pre-fill the Update Book form."""
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT book_id, book_name, author, category, quantity FROM books WHERE book_id=%s",
+        (book_id,)
+    )
+
+    row = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return row
+
+
+def update_book(book_id, book_name, author, category, quantity):
+    """Edit an existing book's details. The Book ID itself is not changeable —
+    it's the identifier that issued_books rows link back to."""
+
+    if not all([book_id, book_name, author, category]):
+        st.warning("All fields are required.")
+        return False
+
+    if quantity < 0:
+        st.warning("Quantity cannot be negative.")
+        return False
+
+    if not record_exists("SELECT book_id FROM books WHERE book_id=%s", (book_id,)):
+        st.error("Book not found.")
+        return False
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute("""
+        UPDATE books
+        SET book_name=%s, author=%s, category=%s, quantity=%s
+        WHERE book_id=%s
+        """,
+        (book_name, author, category, quantity, book_id))
+
+        conn.commit()
+
+        st.success("Book Updated Successfully ✔")
+        return True
+
+    except Exception as e:
+
+        conn.rollback()
+        st.error(e)
+        return False
+
+    finally:
+
+        cursor.close()
+        conn.close()
+
+
 # ==========================================================
 # REGISTER STUDENT
 # ==========================================================
@@ -646,6 +710,25 @@ def get_available_books():
 
     cursor.execute(
         "SELECT book_id, book_name, author, quantity FROM books WHERE quantity > 0 ORDER BY book_name"
+    )
+
+    rows = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return rows
+
+
+def get_all_books():
+    """Every book regardless of stock — used by the Update Book dropdown
+    (you should be able to edit/restock an out-of-stock book too)."""
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT book_id, book_name, author, quantity FROM books ORDER BY book_name"
     )
 
     rows = cursor.fetchall()
