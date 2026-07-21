@@ -51,7 +51,7 @@ from student import (
 # ===================================================
 
 st.set_page_config(
-    page_title="Smart Library Management System",
+    page_title="Library Management System",
     page_icon="📚",
     layout="wide"
 )
