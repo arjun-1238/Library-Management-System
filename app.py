@@ -63,23 +63,18 @@ initialize_session()
 # ===================================================
 
 def is_valid_name(text):
-    """Letters, spaces, apostrophes and hyphens only. Must start with a letter."""
     return bool(re.match(r"^[A-Za-z][A-Za-z .'-]{1,99}$", text.strip()))
 
 def is_valid_roll_no(text):
-    """Alphanumeric only, 3–20 characters, no spaces or symbols."""
     return bool(re.match(r"^[A-Za-z0-9]{3,20}$", text.strip()))
 
 def is_valid_course(text):
-    """Letters, numbers, spaces, dots, & and - only, e.g. 'B.Tech CSE'."""
     return bool(re.match(r"^[A-Za-z0-9][A-Za-z0-9 .&-]{1,49}$", text.strip()))
 
 def is_valid_book_id(text):
-    """Alphanumeric plus hyphen/underscore, 2–20 characters, no spaces."""
     return bool(re.match(r"^[A-Za-z0-9_-]{2,20}$", text.strip()))
 
 def is_valid_category(text):
-    """Letters, spaces, & and - only, e.g. 'Fiction', 'Sci-Fi'."""
     return bool(re.match(r"^[A-Za-z][A-Za-z &-]{1,39}$", text.strip()))
 
 # ===================================================
@@ -103,7 +98,7 @@ def _get_base64_image(path):
     except Exception:
         return None
 
-_library_photo_b64 = _get_base64_image("assets/library.jpg")
+_library_photo_b64 = _get_base64_image("assets/library.avif")
 
 st.markdown(f"""
 <style>
