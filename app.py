@@ -186,7 +186,7 @@ if _library_photo_b64:
         background-size: 40% auto;
         background-position: center;
         background-attachment: no-repeat;
-        opacity: 0.15;
+        opacity: 0.35;
         pointer-events: none;
     "></div>
     """, unsafe_allow_html=True)
