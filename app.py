@@ -248,7 +248,7 @@ try {
 
 if not st.session_state.logged_in:
 
-    _login_hour = datetime.datetime.now().hour
+    _login_hour = datetime.datetime.now(ZoneInfo("Asia/Kolkata")).hour
     if _login_hour < 12:
         _login_greeting = "Good Morning"
     elif _login_hour < 17:
