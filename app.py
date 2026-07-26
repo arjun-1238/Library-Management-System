@@ -60,9 +60,6 @@ st.set_page_config(
 initialize_session()
 
 # ===================================================
-# FIELD VALIDATION — catches wrong FORMAT, not just
-# empty fields (e.g. a roll number with symbols/spaces,
-# a name typed with numbers, etc.)
 # ===================================================
 
 def is_valid_name(text):
@@ -86,7 +83,7 @@ def is_valid_category(text):
     return bool(re.match(r"^[A-Za-z][A-Za-z &-]{1,39}$", text.strip()))
 
 # ===================================================
-# DESIGN TOKENS — one simple accent color, nothing fancy
+# DESIGN TOKENS 
 # ===================================================
 
 INK    = "#1F2937"   # text (fallback for light mode)
@@ -94,10 +91,7 @@ MUTED  = "#6B7280"   # secondary text
 BLUE   = "#2563EB"   # single accent color, used everywhere
 
 # ===================================================
-# LOCAL LIBRARY PHOTO (optional) — put a photo at
-# assets/library.jpg and it will show up as a soft,
-# light watermark behind the login page. If the file
-# isn't there, everything still works fine without it.
+# LOCAL LIBRARY PHOTO 
 # ===================================================
 
 import base64
@@ -110,11 +104,6 @@ def _get_base64_image(path):
         return None
 
 _library_photo_b64 = _get_base64_image("assets/library.jpg")
-
-# ===================================================
-# CSS — respects Streamlit's own light/dark theme via
-# its built-in CSS variables, with sensible fallbacks.
-# ===================================================
 
 st.markdown(f"""
 <style>
@@ -147,12 +136,10 @@ font-size:14px;
 margin-bottom:20px;
 }}
 
-/* Make sure body text / labels always follow the active theme's text color */
 .stApp, .stApp p, .stApp label, .stApp span, .stApp li {{
 color: var(--text-color, {INK});
 }}
 
-/* Buttons — simple solid color, no gradient (stays legible in both themes) */
 div.stButton > button, div[data-testid="stFormSubmitButton"] button {{
 border-radius:6px !important;
 font-weight:600 !important;
@@ -165,7 +152,7 @@ div.stButton > button:hover, div[data-testid="stFormSubmitButton"] button:hover 
 background:#1D4ED8 !important;
 }}
 
-/* Cards / forms — adapts to light or dark theme automatically */
+/* Cards -adapts to light or dark theme automatically */
 div[data-testid="stVerticalBlockBorderWrapper"],
 div[data-testid="stForm"] {{
 border-radius:8px !important;
@@ -174,13 +161,12 @@ background: var(--secondary-background-color, #FFFFFF) !important;
 padding:1rem !important;
 }}
 
-/* Tabs — simple underline on active tab */
 .stTabs [aria-selected="true"] {{
 color:{BLUE} !important;
 font-weight:600;
 }}
 
-/* Metrics — adapts to light or dark theme automatically */
+
 div[data-testid="stMetric"] {{
 background: var(--secondary-background-color, #FFFFFF);
 border:1px solid rgba(128,128,128,0.25);
@@ -195,11 +181,6 @@ color: var(--text-color, {INK}) !important;
 </style>
 """, unsafe_allow_html=True)
 
-# Show the library photo very faintly behind EVERY page (login and all
-# dashboard tabs), not just the login screen. Low, fixed opacity means it
-# stays "light" and unobtrusive in both light and dark theme, and z-index:-1
-# + pointer-events:none keeps it purely decorative — nothing sits behind it,
-# nothing can accidentally click through it.
 if _library_photo_b64:
     st.markdown(f"""
     <div style="
@@ -210,16 +191,11 @@ if _library_photo_b64:
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
-        opacity: 0.07;
+        opacity: 0.25;
         pointer-events: none;
     "></div>
     """, unsafe_allow_html=True)
 
-# Disable the browser's own autocomplete/suggestion dropdown on every input
-# field (it was showing old values typed in unrelated fields). Streamlit's
-# text_input has no autocomplete= option, so this is injected via JS.
-# Runs on a short interval AND via MutationObserver since Streamlit re-renders
-# inputs on almost every interaction (a single one-time pass isn't enough).
 st.components.v1.html("""
 <script>
 function disableAutocomplete() {
@@ -472,15 +448,12 @@ else:
         # ===========================================
 
         with tab1:
-
             book_t1, book_t2 = st.tabs(["➕ Add Book", "✏️ Update Book"])
 
             with book_t1:
-
                 st.subheader("Add a New Book")
 
                 with st.form("add_book_form", clear_on_submit=True):
-
                     col1, col2, col3 = st.columns(3)
 
                     with col1:
