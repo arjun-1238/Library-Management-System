@@ -257,7 +257,7 @@ if not st.session_state.logged_in:
         _login_greeting = "Good Evening"
 
     st.markdown(f"<p class='subtitle' style='margin-bottom:2px;'>👋 {_login_greeting}</p>", unsafe_allow_html=True)
-    st.markdown("<h1 class='title'>📚 Smart Library Management System</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='title'>📚 Library Management System</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Manage books, students and issued copies — all in one place</p>", unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns([1, 2, 1])
