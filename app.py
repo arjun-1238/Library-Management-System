@@ -183,7 +183,7 @@ if _library_photo_b64:
         inset: 0;
         z-index: -1;
         background-image: url(data:image/jpeg;base64,{_library_photo_b64});
-        background-size: 80% auto;
+        background-size: 40% auto;
         background-position: center;
         background-attachment: no-repeat;
         opacity: 0.15;
