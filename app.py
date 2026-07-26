@@ -98,7 +98,7 @@ def _get_base64_image(path):
     except Exception:
         return None
 
-_library_photo_b64 = _get_base64_image("assets/library.avif")
+_library_photo_b64 = _get_base64_image("assets/images.jfif")
 
 st.markdown(f"""
 <style>
