@@ -3,15 +3,6 @@ import mysql.connector
 
 
 def get_connection():
-    """
-    Opens a fresh MySQL connection using Streamlit's secrets.
-    Works identically on your laptop (.streamlit/secrets.toml) and on
-    Streamlit Community Cloud (Secrets set in the app dashboard).
-
-    Uses mysql-connector-python (NOT pymysql) because auth.py calls
-    conn.cursor(dictionary=True) — that keyword argument only exists
-    on mysql-connector-python's cursor, not pymysql's.
-    """
     return mysql.connector.connect(
         host=st.secrets["db_host"],
         port=int(st.secrets.get("db_port", 3306)),
