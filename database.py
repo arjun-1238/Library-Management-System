@@ -1,16 +1,16 @@
-import streamlit as st
 import mysql.connector
+import streamlit as st
 
 
 def get_connection():
-    return mysql.connector.connect(
-        host=st.secrets["db_host"],
-        port=int(st.secrets.get("db_port", 3306)),
-        user=st.secrets["db_user"],
-        password=st.secrets["db_password"],
-        database=st.secrets["db_name"],
-        ssl_disabled=False,   # Aiven requires an SSL connection
-    )
+  return mysql.connector.connect(
+      host=st.secrets["tidb"]["host"],
+      port=int(st.secrets["tidb"]["port"]),
+      user=st.secrets["tidb"]["user"],
+      password=st.secrets["tidb"]["password"],
+      database=st.secrets["tidb"]["database"],
+      ssl_verify_cert=True, 
+  )
 
 
 def fetch_one(query, params=None):
